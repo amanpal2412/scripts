@@ -1,0 +1,17 @@
+#Format of logrotate config for nginx
+/var/log/nginx/*.log {
+        dateext
+        daily
+        missingok
+        rotate 5
+        compress
+        compresscmd /bin/bzip2
+        compressoptions -9
+        compressext .bz2
+        notifempty
+        create 640 nginx adm
+        sharedscripts
+        postrotate
+                [ -f /var/run/nginx.pid ] && kill -USR1 `cat /var/run/nginx.pid`
+        endscript
+}

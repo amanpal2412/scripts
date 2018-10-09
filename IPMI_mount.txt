@@ -1,0 +1,9 @@
+We have built up automation script which auto-mounts iPXE ISO file (similar to API call), which has helped a lot recently during quick installations of DD servers, specially the last ITA servers.
+
+Below is the short summary of challenges we faced and actions taken from our end.
+- After getting a rejection from hardware team that latest Redfish API does not support our hardware (SD-276732), we started looking into options which can work.
+- So what we did here is, create a login session and using the session ID mount the ISO which is available from Samba share created on Pulp SWE1.
+- Now when all DD servers are pre-configured using LACP, a small command to Mount/Un-mount the iPXE ISO came out to be very handy.
+- I have attached the script which can be used as :  ./ipxe_automount.sh <ipmi-host-ip> <.iso filename> <mount|unmount>
+
+part from that, we have as well setup a new Foreman smart-proxy in BEL1 (in sync with Martin H), and with this it now takes less time for TFTP booting the server using iPXE. In the process to create new proxy we fixed broken DHCP module and that fixed puppet error on all other proxies. This helped us while installations of servers in GBR, BEL, DEU, ITA DCs.
