@@ -1,0 +1,52 @@
+#!/bin/sh
+#Script for Application monitoring of FRONTEND(Nginx) components
+#Fetching list of components running on the server thru the motherbox API and monitoring their status via Nagios 
+
+ps -ef | grep -e nginx | grep -e www > /dev/null
+if [ $? -eq 0 ];then
+
+CURL_MOTHERBOX_URL="curl --silent --request GET https://motherbox-api.kindredgroup.com/v1/components"
+FRONTEND_ID=`$CURL_MOTHERBOX_URL/containers?container=FRONTEND | grep id | awk '{print $2}' | awk -F',' '{print $1}'`
+$CURL_MOTHERBOX_URL > /tmp/components.txt
+FRONTEND_COMPONENTS=`cat /tmp/components.txt | grep -A 10 "\"container_id\": $FRONTEND_ID" | grep -e unique_name -e baseport | awk '{print $2}' | awk -F',' '{print $1}' | grep "\"" | sed s/\"//g`
+FRONTEND_COMPONENTS_PORT=`cat /tmp/components.txt | grep -A 10 "\"container_id\": $FRONTEND_ID" | grep -e unique_name -e baseport | awk '{print $2}' | grep -v "\"" |sed s/,//g`
+TOTAL_FRONTEND_COMPONENTS=`cat /tmp/components.txt | grep "\"container_id\": $FRONTEND_ID" | wc -l`
+
+if [ "$TOTAL_FRONTEND_COMPONENTS" -eq 0 ]; then
+    exit 0
+fi
+
+echo "<<<local>>>"
+
+count=1
+while [ $count -le $TOTAL_FRONTEND_COMPONENTS ]
+do
+COMPONENT=`echo $FRONTEND_COMPONENTS | cut -d" " -f$count`
+ps -ef | grep -i $COMPONENT | grep -v grep > /dev/null
+if [ $? == 0 ]
+then
+
+PORT=`echo $FRONTEND_COMPONENTS_PORT | cut -d" " -f$count`
+URL="http://localhost:$PORT"
+STATUS_CODE=$(curl -Is -w "%{http_code}" -L $URL -o /dev/null)
+
+if [ "$STATUS_CODE" != "200" ];
+then
+status=2
+statustxt=CRIT
+put="$COMPONENT with port $PORT is DOWN"
+else
+status=0
+statustxt=OK
+put="$COMPONENT with port $PORT is UP"
+fi
+
+echo "$status $COMPONENT Status_Code=$STATUS_CODE $statustxt - $put"
+
+fi
+(( count++ ))
+
+done
+
+rm /tmp/components.txt
+fi

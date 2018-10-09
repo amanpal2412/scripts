@@ -1,0 +1,35 @@
+#!/bin/bash
+# Loads and mounts an ISO over SMB via the
+# SuperMicro IPMI web interface
+
+
+if [[ $# -ne 3 ]]; then
+    echo "usage: $0 <ipmi-host> <.iso filename> <mount|unmount>"
+    exit 1
+fi
+
+IPMI_HOST="$1"
+IPMI_USER=ADMIN
+IPMI_PASS=ADMIN
+SMB_USER=guest
+ISO="$2"
+
+SESSION_ID=$(curl -d "name=${IPMI_USER}&pwd=${IPMI_PASS}" "https://${IPMI_HOST}/cgi/login.cgi" --silent --insecure -i | awk '/Set-Cookie/ && NR != 2 { print $2 }')
+if ! [[ ${SESSION_ID} =~ ^SID=[a-z]{16}\;$ ]]; then
+  MESSAGE="Unexpected SESSION_ID from ${IPMI_HOST} - ${SESSION_ID}"
+  exit 2
+fi
+
+if [ "$3" == "mount" ]; then
+        curl "https://${IPMI_HOST}/cgi/op.cgi" -H "Cookie: ${SESSION_ID}" --silent --insecure --data "op=config_iso&host=10.68.32.15&path=%5Cipxe%5C${ISO}&user=${SMB_USER}&pwd=&_="
+        sleep 1
+        curl "https://${IPMI_HOST}/cgi/uisopin.cgi" -H "Cookie: ${SESSION_ID}" --silent --insecure --data ""
+elif [ "$3" == "unmount" ]; then
+        curl "https://${IPMI_HOST}/cgi/uisopout.cgi" -H "Cookie: ${SESSION_ID}" --silent --insecure --data ""
+        sleep 1
+        curl "https://${IPMI_HOST}/cgi/op.cgi" -H "Cookie: ${SESSION_ID}" --silent --insecure --data "op=config_iso&host=&path=&user=&pwd=&_="
+        echo "Success"
+else
+        echo "Please enter mount or unmount after host IP"
+        echo "Failure"
+fi
