@@ -1,0 +1,22 @@
+#!/bin/bash
+#Create N number of virtual interfaces on a server
+
+#insert starting IP below
+ip=10.96.40.51 
+
+#Extract last octet of the IP to increment
+baseaddr="$(echo $ip | cut -d. -f1-3)"
+lsv="$(echo $ip | cut -d. -f4)"
+
+#loop to create 20 virtual interface
+for i in {0..19}
+do
+
+        cd /etc/sysconfig/network-scripts/
+        echo IPADDR="$baseaddr.$lsv" > "ifcfg-eth0:$i"
+        echo NETMASK="255.255.252.0" >> "ifcfg-eth0:$i"
+        echo GATEWAY="10.96.40.1" >> "ifcfg-eth0:$i"
+        echo DEVICE=eth0:$i >> "ifcfg-eth0:$i"
+        lsv=$(( $lsv + 1 ))
+
+done
